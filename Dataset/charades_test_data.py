@@ -15,7 +15,7 @@ import math
 activity_gt = namedtuple('activity_gt',['file_name', 'start_time', 'end_time', 'a_class', 'clip_length'])
 #class_list = namedtuple('class_list', ['abrev', 'vector_idx', 'descrip'])
 
-class Charades_Data(data.Dataset):
+class Charades_Test_Data(data.Dataset):
 	def __init__(self, root_dir):
 		self.frame_dir = os.path.join(root_dir,'RGB_frames')
 		self.flow_dir = os.path.join(root_dir,'optical_flow')
@@ -23,7 +23,7 @@ class Charades_Data(data.Dataset):
 		self.width = 224
 		self.height=224
 
-		annot_file = os.path.join(root_dir, 'Charades_v1_train.csv')
+		annot_file = os.path.join(root_dir, 'Charades_v1_test.csv')
 
 		self.small_data_names = os.listdir(self.frame_dir)
 
