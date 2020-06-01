@@ -1,7 +1,7 @@
 from charades_train_data import Charades_Train_Data
 import torch
 
-d = Charades_Train_Data('./Mini_data')
+d = Charades_Train_Data('./Dataset/Mini_data')
 loader = torch.utils.data.DataLoader(dataset=d, batch_size=1, shuffle=False)
 s,t,l = d[0]
 
