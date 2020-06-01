@@ -11,19 +11,29 @@ import os
 import pickle
 from collections import namedtuple
 import math
+import random
 
-activity_gt = namedtuple('activity_gt',['file_name', 'start_time', 'end_time', 'a_class', 'clip_length'])
+clip_annotation = namedtuple('clip_annotation', ['clip_name', 'clip_end_frame', 'action_list'])
+action_annotation = namedtuple('action_annotation', ['start_frame', 'end_frame', 'label'])
+
+#activity_gt = namedtuple('activity_gt',['file_name', 'start_time', 'end_time', 'a_class', 'clip_length'])
 #class_list = namedtuple('class_list', ['abrev', 'vector_idx', 'descrip'])
 
 class Charades_Test_Data(data.Dataset):
-	def __init__(self, root_dir):
+	def __init__(self, root_dir, Lvalue, num_frames):
 		self.frame_dir = os.path.join(root_dir,'RGB_frames')
 		self.flow_dir = os.path.join(root_dir,'optical_flow')
 		self.classfile = os.path.join(root_dir, 'Charades_v1_classes.txt')
-		self.width = 224
-		self.height=224
+		self.width = 256
+		self.height = 256
+		self.fps = 24
+		self.conv_w = 224
+		self.conv_h = 224
 
-		annot_file = os.path.join(root_dir, 'Charades_v1_test.csv')
+		self.L_val = Lvalue
+		self.num_frames_test = num_frames
+
+		annot_file = os.path.join(root_dir, 'Charades_v1_train.csv')
 
 		self.small_data_names = os.listdir(self.frame_dir)
 
@@ -41,6 +51,7 @@ class Charades_Test_Data(data.Dataset):
 			itr+=1
 
 	def prepare_annotations(self, annot_file):
+		# Want to store the annotations per clip - each clip has a list of actions
 		# Reads all the annotations from the annotation csv_file
 		self.annotations = []
 		clips = []
@@ -52,21 +63,37 @@ class Charades_Test_Data(data.Dataset):
 					clips.append([row[0], row[9], row[10]])
 
 		for i in clips:
+
+			#####################################################################
+			# THIS SECTION CONSTRAINS THE DATASET TO THE MINI-DATA FOR BUG-FIXING
 			clip_name = i[0]
 			if clip_name not in self.small_data_names:
 				continue
+			######################################################################
+
 			actions = i[1].split(';')
 			clip_length = i[2]
+			clip_end_frame = math.ceil(float(clip_length) * self.fps)
+
+			action_list = []
+
 			for j in actions:
 				l = j.split()
 				label = l[0]
-				start = l[1]
-				end = l[2]
-				t_activity = activity_gt(clip_name, start, end, label, clip_length)
-				self.annotations.append(t_activity)
+				start_frame = math.floor(float(l[1]) * self.fps)
+				end_frame = min(math.ceil(float(l[2]) * self.fps), clip_end_frame) # Some action labels over run the end of the clip for whatever reason.
+				action_list.append(action_annotation(start_frame, end_frame, label))
+
+			self.annotations.append(clip_annotation(clip_name, clip_end_frame, action_list))
 
 	def __len__(self):
 		return len(self.annotations)
+
+	def center_crop(self, img, resize_w, resize_h):
+		c, w, h = img.shape
+		sw = w//2 - resize_w//2
+		sh = h//2 - resize_h//2
+		return img[:, sw:sw+resize_w, sh:sh+resize_h];
 
 	def open_img_rgb(self, path):
 		img = Image.open(path)
@@ -86,135 +113,70 @@ class Charades_Test_Data(data.Dataset):
 
 		return np.stack((img_x, img_y), axis=0);
 
-	def get_rgb_frames(self, activity):
-		#print(activity)
-		frame_rate = 24
+	def get_frame_flow(self, clip_name, frame, max_frame, L=1):
+		# Optical flow can contain more than one frame, all in range(f+L)
+		
+		if frame + L > max_frame:
+			final_frame = max_frame
+		else:
+			final_frame = frame + L
 
-		# Some cases exist where the end time annotation surpasses the clip length...
-		if float(activity.end_time) > float(activity.clip_length):
-			end_time = float(activity.clip_length)
-		else: 
-			end_time = float(activity.end_time)
+		frame_range = [x for x in range(frame, final_frame)]
+		
+		while len(frame_range) < L:
+			frame_range.append(final_frame)
 
-		start_time = float(activity.start_time)
-
-		#print(start_time)
-		#print(end_time)
-
-		start_frame = math.floor(start_time * frame_rate)
-		end_frame = math.ceil(end_time * frame_rate) - 1
-
-		#print(start_frame)
-		#print(end_frame)
-
-		frame_range = list(range(start_frame, end_frame))
-		frame_stack = np.empty((1, 3, self.width, self.height))
+		stack_frames = np.empty((1,self.conv_w,self.conv_h))
 
 		for i in frame_range:
-			file_name = ('{fname}-{number}.jpg').format(fname=activity.file_name,number=str(i+1).zfill(6))
-			file_name = os.path.join(self.frame_dir, os.path.join(activity.file_name,file_name))
-			img = self.open_img_rgb(file_name)
-			img = np.expand_dims(img, axis=0)
-			frame_stack = np.concatenate((frame_stack, img), axis=0)
-
-		#print(len(frame_range))
-		
-		frame_stack = np.delete(frame_stack,0,axis=0)
-		
-		#print(frame_stack.shape)
-		return frame_stack;
-
-	def get_optical_frames(self, activity, num_frames):
-		frame_rate = 24
-		#num_frames = 1 # <------------------ REMOVE FOR MORE FRAMES IN OPTICAL FLOW, ONLY WHEN FIXED
-		# Some cases exist where the end time annotation surpasses the clip length...
-		if float(activity.end_time) > float(activity.clip_length):
-			end_time = float(activity.clip_length)
-		else: 
-			end_time = float(activity.end_time)
-
-		start_time = float(activity.start_time)
-
-		start_frame = math.floor(start_time * frame_rate)
-		end_frame = math.ceil(end_time * frame_rate) # Optical flow ends one frame from the end for some reason.
-
-		frame_range = list(range(start_frame, end_frame-1))
-		#optical_frames = []
-		optical_frames = {}
-
-		#print(frame_range)
-		
-		for i in frame_range: 
-			file_name_x = ('{fname}-{number}x.jpg').format(fname=activity.file_name,number=str(i+1).zfill(6))
-			file_name_y = ('{fname}-{number}y.jpg').format(fname=activity.file_name,number=str(i+1).zfill(6))
-			file_name_x = os.path.join(self.flow_dir, os.path.join(activity.file_name, file_name_x))
-			file_name_y = os.path.join(self.flow_dir, os.path.join(activity.file_name, file_name_y))
-
-			img = self.open_img_flow(file_name_x, file_name_y)
-			#optical_frames.append(img)
-			optical_frames[i] = img
-		
-		#print('OP LEN')
-		#print(len(optical_frames))
-
-		# Next we need to, given the L number, stack frames!
-		l_frame_list = []
-		last_frame = math.floor(float(float(activity.clip_length)* frame_rate) - 1)
-
-		for i in frame_range:
-			l_start = i
-			l_end = i+num_frames
-			if l_end > last_frame:
-				l_end = last_frame
-
-			f_range = [x for x in range(l_start, l_end)]
+			frame_name_x = ('{fname}/{fname}-{number}x.jpg').format(fname=clip_name,number=str(frame).zfill(6))
+			frame_name_y = ('{fname}/{fname}-{number}y.jpg').format(fname=clip_name,number=str(frame).zfill(6)) 
+			frame_flow = self.open_img_flow(os.path.join(self.flow_dir, frame_name_x), os.path.join(self.flow_dir, frame_name_y))
+			frame_flow = self.center_crop(frame_flow, self.conv_w,self.conv_h)
+			stack_frames = np.concatenate((stack_frames, frame_flow), axis=0)
 			
-			if len(f_range) == 0:
-				f_range.append(last_frame)
+		return np.delete(stack_frames,0,axis=0);
 
-			while len(f_range) < num_frames:
-				f_range.append(last_frame)
+	def get_frame(self, clip_name, frame):
+		frame_name = ('{fname}/{fname}-{number}.jpg').format(fname=clip_name,number=str(frame).zfill(6))
+		rgb_frame = self.open_img_rgb(os.path.join(self.frame_dir, frame_name))
+		rgb_frame = self.center_crop(rgb_frame, self.conv_w,self.conv_h)
+		return rgb_frame;
 
-			l_frame_list.append(f_range)
+	def build_gt_vec(self, frame, action_list):
 
-		#print(l_frame_list)
+		gt_vec = np.zeros(self.num_classes)
+		
+		for i in action_list:
+			if frame in range(i.start_frame, i.end_frame + 1):
+				gt_vec[self.classes[i.label]] == 1
 
-		# Create stacks of optical flow frames:
-		frame_stack = np.empty((1, 2*num_frames, self.width, self.height))
-		for i in range(len(l_frame_list)):
-			stacked_frames = np.empty((2, self.width, self.height))
-			
-			for j in l_frame_list[i]:
-				stacked_frames = np.stack((stacked_frames, optical_frames[j]), axis=0)
-			stacked_frames = np.delete(stacked_frames,0,axis=0)
-			#stacked_frames = np.expand_dims(stacked_frames, axis=0)
-			#print(stacked_frames.shape)
-			#print(frame_stack.shape)
-			frame_stack = np.concatenate((frame_stack, stacked_frames),axis=0)
-
-		frame_stack = np.delete(frame_stack,0,axis=0)
-	
-		#print(len(frame_stack))
-		#print(frame_stack.shape)
-		return frame_stack;
-
-	def build_gt_vec(self, idx):
-		classes = np.zeros(self.num_classes)
-
-		classes[idx] = 1
-		return classes
+		return gt_vec;
 
 	def __getitem__(self, idx):
 
-		activity = self.annotations[idx]
-		#print(activity)
-		label_idx = self.classes[activity.a_class]
-		label = self.build_gt_vec(label_idx)
+		clip = self.annotations[idx]
+		
+		# Example: 400frames - (L(temporal spacing)=10 * num_frames_test=25)
+		# 250 frames to complete this sequence. So out start frames could be any from 1 - 150
+		possible_range_start = [x for x in range(clip.clip_end_frame-(self.L_val*self.num_frames_test))]
+		start_frame = random.choice(possible_range_start)
 
-		spatial_stream = self.get_rgb_frames(activity)
-		temporal_stream = self.get_optical_frames(activity,1)
+		rgb_frames = []
+		optical_frames = []
+		labels = []
 
-		return spatial_stream, temporal_stream, label;
+		for i in range(self.num_frames_test):
+			frame = start_frame+(i*self.L_val)
+			rgb_frames.append(self.get_frame(clip.clip_name, frame))
+			optical_frames.append(self.get_frame_flow(clip.clip_name, frame, clip.clip_end_frame, L=self.L_val))
+			labels.append(self.build_gt_vec(frame, clip.action_list))
+
+		spatial_stream = np.stack((rgb_frames), axis=0)
+		temporal_stream = np.stack((optical_frames), axis=0)
+		labels = np.stack((labels), axis=0)
+
+		return spatial_stream, temporal_stream, labels;
 
 
 
