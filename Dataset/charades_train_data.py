@@ -154,7 +154,7 @@ class Charades_Train_Data(data.Dataset):
 	def __getitem__(self, idx):
 		# Per the paper, we sample a single random frame from the clip
 		clip = self.annotations[idx]
-		frame_range = [x for x in range(1, clip.clip_end_frame + 1)]
+		frame_range = [x for x in range(1, clip.clip_end_frame)]
 		frame = random.choice(frame_range)
 		
 		spatial_stream = self.get_frame(clip.clip_name, frame)
