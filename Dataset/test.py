@@ -2,8 +2,9 @@ from charades_train_data import Charades_Train_Data
 from charades_test_data import Charades_Test_Data
 import torch
 
-d = Charades_Test_Data('./Dataset/Mini_data', 5, 25)
-loader = torch.utils.data.DataLoader(dataset=d, batch_size=1, shuffle=False)
+train = Charades_Train_Data('./Mini_data', 2)
+d = Charades_Test_Data('./Mini_data', 5, 25)
+loader = torch.utils.data.DataLoader(dataset=train, batch_size=1, shuffle=False)
 s,t,l = d[0]
 
 print(type(s))

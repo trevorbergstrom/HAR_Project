@@ -20,7 +20,7 @@ activity_gt = namedtuple('activity_gt',['file_name', 'start_time', 'end_time', '
 #class_list = namedtuple('class_list', ['abrev', 'vector_idx', 'descrip'])
 
 class Charades_Train_Data(data.Dataset):
-	def __init__(self, root_dir):
+	def __init__(self, root_dir, Lvalue):
 		self.frame_dir = os.path.join(root_dir,'RGB_frames')
 		self.flow_dir = os.path.join(root_dir,'optical_flow')
 		self.classfile = os.path.join(root_dir, 'Charades_v1_classes.txt')
@@ -29,6 +29,7 @@ class Charades_Train_Data(data.Dataset):
 		self.fps = 24
 		self.conv_w = 224
 		self.conv_h = 224
+		self.L_val = Lvalue
 
 		annot_file = os.path.join(root_dir, 'Charades_v1_train.csv')
 
@@ -158,7 +159,7 @@ class Charades_Train_Data(data.Dataset):
 
 		spatial_stream = self.get_frame(clip.clip_name, frame)
 
-		temporal_stream = self.get_frame_flow(clip.clip_name, frame, clip.clip_end_frame, L=1)
+		temporal_stream = self.get_frame_flow(clip.clip_name, frame, clip.clip_end_frame, L=self.L_val)
 		
 		# TO get the label: since multiple actions can be occuring at each frame, we need to select all the labels that are present at that frame. 
 		label = self.build_gt_vec(frame, clip.action_list)
