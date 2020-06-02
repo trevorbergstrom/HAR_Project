@@ -6,6 +6,8 @@ sys.path.append('./Model')
 import argparse
 from torchvision import datasets, models, transforms
 from charades_train_data import Charades_Train_Data
+import pathlib
+import os
 
 
 def get_model(num_classes, gpu, temporal_channels):
@@ -69,10 +71,6 @@ def train(train_loader,model_s,model_t,criterion_s,criterion_t, optimizer_s, opt
 		
 	print(f"----------------------------Epoch {epoch} spatial loss: {round(running_loss_s,4)} temporal loss: {round(running_loss_t,4)}--------------------------")
 
-	print('-------------Saving Model----------------')
-	torch.save(model_s.state_dict(), 'spatial.pth')
-	torch.save(model_t.state_dict(), 'temporal.pth')
-	print('-----------SAVE MODEL COMPLETE-----------')
 
 def start():
 	
@@ -82,16 +80,34 @@ def start():
 	parser.add_argument('--learn_rate', help='Learning rate', default=0.001, type=float, nargs='?')
 	parser.add_argument('--GPU', help='running on GPU?', default=False, type=bool, nargs='?')
 	parser.add_argument('--Lvalue', help='L value (number of optical frames)', default=10, type=int, nargs='?')
+	parser.add_argument('--Checkpoint', help='Checkpoint folder to train from', default='', nargs='?')
+	parser.add_argument('--Save_dir', help='Fodler to save model to', default='./model_saves', nargs='?')
+
 	args = parser.parse_args()
 	d = Charades_Train_Data('./Dataset/Full_data', args.Lvalue)
 	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=False)
 	
+	pathlib.Path(args.Save_dir).mkdir(parents=True, exist_ok=True)
+	model_s_path = os.path.join(args.Save_dir,'spatial.pth')
+	model_t_path = os.path.join(args.Save_dir,'temporal.pth')
+
 	model_s, model_t, criterion_s, criterion_t, optimizer_s, optimizer_t= get_model(d.num_classes, args.GPU, 2*d.L_val)
+
+	if args.Checkpoint:
+		print('Loading model checkpoint...')
+		model_s.load_state_dict(torch.load(os.path.join(args.Checkpoint, 'spatial.pth')))
+		model_t.load_state_dict(torch.load(os.path.join(args.Checkpoint, 'temporal.pth')))
+
 	a=1
 	for epoch in range(args.num_epochs):
 		print("Training...")
 # 		train(iter(train_loader),model,criterion, optimizer, epoch)
 		train(train_loader,model_s, model_t,criterion_s, criterion_t, optimizer_s, optimizer_t, epoch, args.GPU)
 	
+	print('-------------Saving Model----------------')
+	torch.save(model_s.state_dict(), model_s_path)
+	torch.save(model_t.state_dict(), model_t_path)
+	print('-----------SAVE MODEL COMPLETE-----------')
+
 if __name__ == '__main__':
 	start()
