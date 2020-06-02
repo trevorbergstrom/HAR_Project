@@ -159,7 +159,8 @@ class Charades_Test_Data(data.Dataset):
 		
 		# Example: 400frames - (L(temporal spacing)=10 * num_frames_test=25)
 		# 250 frames to complete this sequence. So out start frames could be any from 1 - 150
-		possible_range_start = [x for x in range(clip.clip_end_frame-(self.L_val*self.num_frames_test))]
+		possible_range_start = [x for x in range(1, clip.clip_end_frame-(self.L_val*self.num_frames_test))]
+		
 		start_frame = random.choice(possible_range_start)
 
 		rgb_frames = []

@@ -154,11 +154,10 @@ class Charades_Train_Data(data.Dataset):
 	def __getitem__(self, idx):
 		# Per the paper, we sample a single random frame from the clip
 		clip = self.annotations[idx]
-		frame_range = [x for x in range(clip.clip_end_frame + 1)]
+		frame_range = [x for x in range(1, clip.clip_end_frame + 1)]
 		frame = random.choice(frame_range)
-
+		
 		spatial_stream = self.get_frame(clip.clip_name, frame)
-
 		temporal_stream = self.get_frame_flow(clip.clip_name, frame, clip.clip_end_frame, L=self.L_val)
 		
 		# TO get the label: since multiple actions can be occuring at each frame, we need to select all the labels that are present at that frame. 

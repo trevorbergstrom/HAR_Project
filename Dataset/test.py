@@ -4,7 +4,7 @@ import torch
 
 train = Charades_Train_Data('./Mini_data', 2)
 d = Charades_Test_Data('./Mini_data', 5, 25)
-loader = torch.utils.data.DataLoader(dataset=train, batch_size=1, shuffle=False)
+loader = torch.utils.data.DataLoader(dataset=d, batch_size=1, shuffle=False)
 s,t,l = d[0]
 
 print(type(s))

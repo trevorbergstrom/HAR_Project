@@ -49,9 +49,9 @@ def train(train_loader,model_s,model_t,criterion_s,criterion_t, optimizer_s, opt
 def start():
 	
 	parser = argparse.ArgumentParser(description="Two Stream ConvNet for HAR")
-	parser.add_argument('num_epochs', help='Number of epochs to train for', default=2, nargs='?', type=int)
-	parser.add_argument('save_path', help='path to save the model', default='./saved_models', nargs='?')
-	parser.add_argument('learn_rate', help='Learning rate', default=0.001, type=float, nargs='?')
+	parser.add_argument('--num_epochs', help='Number of epochs to train for', default=2, nargs='?', type=int)
+	parser.add_argument('--save_path', help='path to save the model', default='./saved_models', nargs='?')
+	parser.add_argument('--learn_rate', help='Learning rate', default=0.001, type=float, nargs='?')
 	args = parser.parse_args()
 	d = Charades_Train_Data('./Dataset/Mini_data')
 	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=1, shuffle=False)
