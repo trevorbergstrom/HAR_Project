@@ -56,7 +56,7 @@ def start():
 	d = Charades_Train_Data('./Dataset/Mini_data')
 	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=1, shuffle=False)
 	
-	model_s, model_t, criterion_s, criterion_t, optimizer_s, optimizer_t= get_model(train_loader.dataset.num_classes)
+	model_s, model_t, criterion_s, criterion_t, optimizer_s, optimizer_t= get_model(d.num_classes, 2*d.L_val)
 	a=1
 	for epoch in range(args.num_epochs):
 # 		train(iter(train_loader),model,criterion, optimizer, epoch)

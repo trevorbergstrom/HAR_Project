@@ -20,7 +20,7 @@ activity_gt = namedtuple('activity_gt',['file_name', 'start_time', 'end_time', '
 #class_list = namedtuple('class_list', ['abrev', 'vector_idx', 'descrip'])
 
 class Charades_Train_Data(data.Dataset):
-	def __init__(self, root_dir, Lvalue):
+	def __init__(self, root_dir, Lvalue=1):
 		self.frame_dir = os.path.join(root_dir,'RGB_frames')
 		self.flow_dir = os.path.join(root_dir,'optical_flow')
 		self.classfile = os.path.join(root_dir, 'Charades_v1_classes.txt')
