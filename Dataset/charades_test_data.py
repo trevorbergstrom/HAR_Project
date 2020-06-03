@@ -33,11 +33,11 @@ class Charades_Test_Data(data.Dataset):
 		self.L_val = Lvalue
 		self.num_frames_test = num_frames
 
-		annot_file = os.path.join(root_dir, 'Charades_v1_train.csv')
+		annot_file = os.path.join(root_dir, 'Charades_v1_test.csv')
 
 		self.small_data_names = os.listdir(self.frame_dir)
 
-		self.prepare_annotations(annot_file)
+		self.prepare_annotations(annot_file, Lvalue*num_frames)
 		self.get_classes(self.classfile)
 		self.num_classes = len(self.classes)
 
@@ -50,7 +50,7 @@ class Charades_Test_Data(data.Dataset):
 			self.classes[l[0]] = itr
 			itr+=1
 
-	def prepare_annotations(self, annot_file):
+	def prepare_annotations(self, annot_file, min_end_frame):
 		# Want to store the annotations per clip - each clip has a list of actions
 		# Reads all the annotations from the annotation csv_file
 		self.annotations = []
@@ -60,7 +60,8 @@ class Charades_Test_Data(data.Dataset):
 			next(csv_reader)
 			for row in csv_reader:
 				if len(row[9]) > 0:
-					clips.append([row[0], row[9], row[10]])
+					if (float(row[10]) * self.fps) > min_end_frame + 1:
+						clips.append([row[0], row[9], row[10]])
 
 		for i in clips:
 
@@ -143,13 +144,14 @@ class Charades_Test_Data(data.Dataset):
 		rgb_frame = self.center_crop(rgb_frame, self.conv_w,self.conv_h)
 		return rgb_frame;
 
-	def build_gt_vec(self, frame, action_list):
+	def build_gt_vec(self, frames, action_list):
 
 		gt_vec = np.zeros(self.num_classes)
 		
-		for i in action_list:
-			if frame in range(i.start_frame, i.end_frame + 1):
-				gt_vec[self.classes[i.label]] == 1
+		for frame in frames:
+			for i in action_list:
+				if frame in range(i.start_frame, i.end_frame + 1):
+					gt_vec[self.classes[i.label]] = 1
 
 		return gt_vec;
 
@@ -160,23 +162,24 @@ class Charades_Test_Data(data.Dataset):
 		# Example: 400frames - (L(temporal spacing)=10 * num_frames_test=25)
 		# 250 frames to complete this sequence. So out start frames could be any from 1 - 150
 		possible_range_start = [x for x in range(1, clip.clip_end_frame-(self.L_val*self.num_frames_test))]
-		
+
 		start_frame = random.choice(possible_range_start)
 
 		rgb_frames = []
 		optical_frames = []
-		labels = []
 
 		for i in range(self.num_frames_test):
 			frame = start_frame+(i*self.L_val)
 			rgb_frames.append(self.get_frame(clip.clip_name, frame))
 			optical_frames.append(self.get_frame_flow(clip.clip_name, frame, clip.clip_end_frame, L=self.L_val))
-			labels.append(self.build_gt_vec(frame, clip.action_list))
+			
 
+		
 		spatial_stream = np.stack((rgb_frames), axis=0)
 		temporal_stream = np.stack((optical_frames), axis=0)
-		labels = np.stack((labels), axis=0)
-
+		labels = self.build_gt_vec([x for x in range(start_frame, (self.L_val*self.num_frames_test))], clip.action_list)
+		l = labels.tolist()
+		
 		return spatial_stream, temporal_stream, labels;
 
 

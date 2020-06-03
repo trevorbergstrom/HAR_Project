@@ -147,7 +147,7 @@ class Charades_Train_Data(data.Dataset):
 		
 		for i in action_list:
 			if frame in range(i.start_frame, i.end_frame + 1):
-				gt_vec[self.classes[i.label]] == 1
+				gt_vec[self.classes[i.label]] = 1
 
 		return gt_vec;
 

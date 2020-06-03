@@ -6,8 +6,12 @@ sys.path.append('./Model')
 import argparse
 from torchvision import datasets, models, transforms
 from charades_train_data import Charades_Train_Data
+from charades_test_data import Charades_Test_Data
+from confusion_matrix import confusion_matrix
 import pathlib
 import os
+import numpy as np
+import pickle
 
 
 def get_model(num_classes, gpu, temporal_channels):
@@ -71,6 +75,78 @@ def train(train_loader,model_s,model_t,criterion_s,criterion_t, optimizer_s, opt
 		
 	print(f"----------------------------Epoch {epoch} spatial loss: {round(running_loss_s,4)} temporal loss: {round(running_loss_t,4)}--------------------------")
 
+def test(test_loader, model_s, model_t, gpu, num_classes):
+	model_s.eval()
+	model_t.eval()
+	sig = nn.Sigmoid()
+	preds = []
+	labels = []
+	
+	#pickle_file_p = ''
+	#pickle_file_l = ''
+	pickle_file_p = 'preds.pkl'
+	pickle_file_l = 'labels.pkl'
+
+	if pickle_file_p and pickle_file_l:
+		pickle_file_p = open(pickle_file_p, 'rb')
+		pickle_file_l = open(pickle_file_l, 'rb')
+		preds = pickle.load(pickle_file_p)
+		labels = pickle.load(pickle_file_l)
+	
+	else:
+		example_count = 0
+		test_len = len(test_loader)
+
+		for spatial, temporal, label in test_loader:
+			example_count += 1
+			print(f'Clip #{example_count} / {test_len}')
+			
+			if gpu:
+				spatial = spatial.cuda()
+				temporal = temporal.cuda()
+
+			with torch.no_grad():
+				s = model_s(spatial.squeeze().float())
+				t = model_t(temporal.squeeze().float())
+			
+			s_num = s.shape[0]
+			t_num = t.shape[0]
+
+			s = s.sum(axis=0)
+			t = t.sum(axis=0)
+			s = s.div(s_num)
+			t = t.div(t_num)
+			
+			pred = torch.add(s,t)
+			pred = pred.div(2)
+			pred = sig(pred)
+	
+			if gpu == True:
+				pred = pred.cpu()
+
+			label = label.squeeze()
+			labels.append(label.numpy())
+			preds.append(pred.numpy())
+
+		preds = np.array(preds).astype(np.float64)
+		labels = np.array(labels).astype(np.int32)
+
+		pickle_file_p = open('preds.pkl', 'wb')
+		pickle.dump(preds, pickle_file_p)
+		pickle_file_p.close()
+		pickle_file_l = open('labels.pkl', 'wb')
+		pickle.dump(labels, pickle_file_l)
+		pickle_file_l.close()
+
+	print(preds.shape)
+	print(labels.shape)
+	fucks = 0
+	for i in range(len(labels)):
+		if sum(labels[i]) == 0:
+			fucks += 1
+	print('FUCKS: ' + str(fucks))
+	c = confusion_matrix(num_classes)
+	c.mAP(labels, preds)
 
 def start():
 	
@@ -83,22 +159,39 @@ def start():
 	parser.add_argument('--Checkpoint', help='Checkpoint folder to train from', default='', nargs='?')
 	parser.add_argument('--Save_dir', help='Fodler to save model to', default='./model_saves', nargs='?')
 	parser.add_argument('--data_type', help='Data type', default='Mini_data', nargs='?')
+	parser.add_argument('--test', help='Test model?', default=False, nargs='?')
+	parser.add_argument('--test_L', help='num optical frames for testing', default=10, nargs='?', type=int)
+	parser.add_argument('--test_frames', help='number of frames for testing', default=25, nargs='?', type=int)
 
 
 	args = parser.parse_args()
 	d = Charades_Train_Data(f'./Dataset/{args.data_type}', args.Lvalue)
 	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=False)
 	
+	
 	pathlib.Path(args.Save_dir).mkdir(parents=True, exist_ok=True)
 	model_s_path = os.path.join(args.Save_dir,'spatial.pth')
 	model_t_path = os.path.join(args.Save_dir,'temporal.pth')
 
-	model_s, model_t, criterion_s, criterion_t, optimizer_s, optimizer_t= get_model(d.num_classes, args.GPU, 2*d.L_val)
+	if args.test:
+		d = Charades_Test_Data('./Dataset/Full_data', args.test_L, args.test_frames)
+	else:
+		d = Charades_Train_Data('./Dataset/Full_data', args.Lvalue)
+
+	model_s, model_t, criterion_s, criterion_t, optimizer_s, optimizer_t= get_model(d.num_classes, args.GPU, 2*args.Lvalue)
 
 	if args.Checkpoint:
 		print('Loading model checkpoint...')
 		model_s.load_state_dict(torch.load(os.path.join(args.Checkpoint, 'spatial.pth')))
 		model_t.load_state_dict(torch.load(os.path.join(args.Checkpoint, 'temporal.pth')))
+	
+	if args.test:
+		test_loader = torch.utils.data.DataLoader(dataset=d, batch_size=1, shuffle=False)
+		test(test_loader, model_s, model_t, args.GPU, d.num_classes)
+		exit()
+
+	
+	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=False)
 
 	a=1
 	for epoch in range(args.num_epochs):
