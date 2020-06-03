@@ -165,8 +165,6 @@ def start():
 
 
 	args = parser.parse_args()
-	d = Charades_Train_Data(f'./Dataset/{args.data_type}', args.Lvalue)
-	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=False)
 	
 	
 	pathlib.Path(args.Save_dir).mkdir(parents=True, exist_ok=True)
@@ -174,10 +172,11 @@ def start():
 	model_t_path = os.path.join(args.Save_dir,'temporal.pth')
 
 	if args.test:
-		d = Charades_Test_Data('./Dataset/Full_data', args.test_L, args.test_frames)
+		d = Charades_Test_Data(f'./Dataset/{args.data_type}', args.test_L, args.test_frames)
 	else:
-		d = Charades_Train_Data('./Dataset/Full_data', args.Lvalue)
+		d = Charades_Train_Data(f'./Dataset/{args.data_type}', args.Lvalue)
 
+	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=False)
 	model_s, model_t, criterion_s, criterion_t, optimizer_s, optimizer_t= get_model(d.num_classes, args.GPU, 2*args.Lvalue)
 
 	if args.Checkpoint:
