@@ -1,10 +1,16 @@
 from charades_train_data import Charades_Train_Data
 from charades_test_data import Charades_Test_Data
 import torch
+import os
 
-train = Charades_Train_Data('./Mini_data', 2)
-d = Charades_Test_Data('./Mini_data', 5, 25)
+print(os.getcwd())
+train = Charades_Train_Data('./Dataset/Full_data', 2)
+d = Charades_Test_Data('./Dataset/Full_data', 5, 25)
+
+print(len(train))
+print(len(d))
 loader = torch.utils.data.DataLoader(dataset=d, batch_size=1, shuffle=False)
+
 s,t,l = d[0]
 
 print(type(s))
