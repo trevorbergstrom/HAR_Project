@@ -82,9 +82,11 @@ def start():
 	parser.add_argument('--Lvalue', help='L value (number of optical frames)', default=10, type=int, nargs='?')
 	parser.add_argument('--Checkpoint', help='Checkpoint folder to train from', default='', nargs='?')
 	parser.add_argument('--Save_dir', help='Fodler to save model to', default='./model_saves', nargs='?')
+	parser.add_argument('--data_type', help='Data type', default='Mini_data', nargs='?')
+
 
 	args = parser.parse_args()
-	d = Charades_Train_Data('./Dataset/Full_data', args.Lvalue)
+	d = Charades_Train_Data(f'./Dataset/{args.data_type}', args.Lvalue)
 	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=False)
 	
 	pathlib.Path(args.Save_dir).mkdir(parents=True, exist_ok=True)
