@@ -46,13 +46,14 @@ def train(train_loader,model_s,model_t,criterion_s,criterion_t, optimizer_s, opt
 
 	for inputs,temporal, labels in train_loader:
 		batch_count += 1
-
+		labels = labels.float()
+		inputs = inputs.float()
 		if gpu == True:
-			inputs = inputs.float().cuda()
+			inputs = inputs.cuda()
 			temporal = temporal.float().cuda()
 			labels = labels.cuda()
 		else:
-			inputs = inputs.float()
+			inputs = inputs
 			temporal = temporal.float()
 
 		output_s = model_s(inputs)
