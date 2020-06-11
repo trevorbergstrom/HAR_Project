@@ -214,14 +214,14 @@ class Charades_Train_Data(data.Dataset):
 # 		base_test1 = cv.compareHist(hist_base, hist_test1, compare_method)
 # 		print('Method:', compare_method, 'Perfect, Base-Test(1):',\
 # 	          base_base, '/', base_test1 )
-		print(f'frame num {current_frame}')	
+# 		print(f'frame num {current_frame}')	
 		diffs = []
 		for compare_method in range(4):
 		    base_base = cv.compareHist(hist_base, hist_base, compare_method)
 		    base_test1 = cv.compareHist(hist_base, hist_test1, compare_method)
 		    diffs.append((base_base,base_test1))
-		    print('Method:', compare_method, 'Perfect, Base-Test(1):',\
-		          base_base, '/', base_test1)
+# 		    print('Method:', compare_method, 'Perfect, Base-Test(1):',\
+# 		          base_base, '/', base_test1)
 		return diffs[3][1]
 		return base_test1
 
