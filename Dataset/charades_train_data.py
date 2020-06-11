@@ -83,7 +83,7 @@ class Charades_Train_Data(data.Dataset):
 				start_frame = math.floor(float(l[1]) * self.fps)
 				end_frame = min(math.ceil(float(l[2]) * self.fps), clip_end_frame) # Some action labels over run the end of the clip for whatever reason.
 				action_list.append(action_annotation(start_frame, end_frame, label))
-				self.reduce_action_frames(clip_name, start_frame, end_frame)
+				reduced_frames = self.reduce_action_frames(clip_name, start_frame, end_frame)
 			self.annotations.append(clip_annotation(clip_name, clip_end_frame, action_list))
 					
 	def __len__(self):
