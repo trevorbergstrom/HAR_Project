@@ -12,6 +12,8 @@ import pickle
 from collections import namedtuple
 import math
 import random
+import cv2 as cv
+import matplotlib.pyplot as plt
 
 clip_annotation = namedtuple('clip_annotation', ['clip_name', 'clip_end_frame', 'action_list'])
 action_annotation = namedtuple('action_annotation', ['start_frame', 'end_frame', 'label'])
@@ -81,9 +83,9 @@ class Charades_Train_Data(data.Dataset):
 				start_frame = math.floor(float(l[1]) * self.fps)
 				end_frame = min(math.ceil(float(l[2]) * self.fps), clip_end_frame) # Some action labels over run the end of the clip for whatever reason.
 				action_list.append(action_annotation(start_frame, end_frame, label))
-
+				self.reduce_action_frames(clip_name, start_frame, end_frame)
 			self.annotations.append(clip_annotation(clip_name, clip_end_frame, action_list))
-				
+					
 	def __len__(self):
 		return len(self.annotations)
 
@@ -164,4 +166,62 @@ class Charades_Train_Data(data.Dataset):
 		label = self.build_gt_vec(frame, clip.action_list)
 		return spatial_stream, temporal_stream, label;
 
+	def display(self,*imgs):
+		n = len(imgs)
+		f = plt.figure()
+		for i, img in enumerate(imgs):
+			f.add_subplot(1, n, i + 1)
+			plt.imshow(img)
+		plt.show()
+
+	def reduce_action_frames(self, clip_name, start_frame, end_frame, threshold=0.10):
+		saved_frames = [1]
+		last_frame = 1
+		for i in range(2,end_frame):
+			frame = self.get_frame(clip_name, i)
+			diff = self.frame_diff(clip_name, i, last_frame)
+			if diff > threshold:
+				saved_frames.append(i)
+				last_frame = i
+		return saved_frames
+	
+	def frame_diff(self, clip_name, current_frame, ref_frame):
+		cf = self.get_frame(clip_name, current_frame).transpose(1,2,0)
+		rf = self.get_frame(clip_name, ref_frame).transpose(1,2,0)
+		hsv_base = cv.cvtColor(rf, cv.COLOR_BGR2HSV)
+		hsv_test1 = cv.cvtColor(cf, cv.COLOR_BGR2HSV)
+		
+		h_bins = 50
+		s_bins = 60
+		histSize = [h_bins, s_bins]
+		
+		# hue varies from 0 to 179, saturation from 0 to 255
+		h_ranges = [0, 180]
+		s_ranges = [0, 256]
+		ranges = h_ranges + s_ranges # concat lists
+		# Use the 0-th and 1-st channels
+		channels = [0, 1]
+		
+		hist_base = cv.calcHist([hsv_base], channels, None, histSize, ranges, accumulate=False)
+		cv.normalize(hist_base, hist_base, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
+		
+		hist_test1 = cv.calcHist([hsv_test1], channels, None, histSize, ranges, accumulate=False)
+		cv.normalize(hist_test1, hist_test1, alpha=0, beta=1, norm_type=cv.NORM_MINMAX)
+		
+		
+# 		compare_method = 0
+# 		base_base = cv.compareHist(hist_base, hist_base, compare_method)
+# 		base_test1 = cv.compareHist(hist_base, hist_test1, compare_method)
+# 		print('Method:', compare_method, 'Perfect, Base-Test(1):',\
+# 	          base_base, '/', base_test1 )
+		print(f'frame num {current_frame}')	
+		diffs = []
+		for compare_method in range(4):
+		    base_base = cv.compareHist(hist_base, hist_base, compare_method)
+		    base_test1 = cv.compareHist(hist_base, hist_test1, compare_method)
+		    diffs.append((base_base,base_test1))
+		    print('Method:', compare_method, 'Perfect, Base-Test(1):',\
+		          base_base, '/', base_test1)
+		return diffs[3][1]
+		return base_test1
 
