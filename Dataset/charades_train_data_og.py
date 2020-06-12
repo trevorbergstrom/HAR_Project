@@ -15,8 +15,8 @@ import random
 import cv2 as cv
 import matplotlib.pyplot as plt
 
-clip_annotation = namedtuple('clip_annotation', ['clip_name', 'clip_end_frame', 'action_list'])
-action_annotation = namedtuple('action_annotation', ['start_frame', 'end_frame', 'label'])
+clip_annotation = namedtuple('clip_annotation', ['clip_name', 'clip_end_frame', 'action_list', 'frames_list'])
+action_annotation = namedtuple('action_annotation', ['start_frame', 'end_frame', 'label', 'frames_list'])
 
 activity_gt = namedtuple('activity_gt',['file_name', 'start_time', 'end_time', 'a_class', 'clip_length'])
 #class_list = namedtuple('class_list', ['abrev', 'vector_idx', 'descrip'])
@@ -82,19 +82,36 @@ class Charades_Train_Data(data.Dataset):
 			clip_end_frame = math.ceil(float(clip_length) * self.fps)
 
 			action_list = []
+			frames_list = []
 			for j in actions:
 				l = j.split()
 				label = l[0]
 				start_frame = math.floor(float(l[1]) * self.fps)
 				end_frame = min(math.ceil(float(l[2]) * self.fps), clip_end_frame) # Some action labels over run the end of the clip for whatever reason.
 				#Here is where we will reduce the frames
-				action_list.append(action_annotation(start_frame, end_frame, label))
+				reduced_frames = self.reduce_action_frames(clip_name, start_frame, end_frame)
+				action_list.append(action_annotation(start_frame, end_frame, label, reduced_frames))
+				frames_list += reduced_frames
+
+				'''
+				print('Action Start: ' + str(start_frame))
+				print("Action End: " + str(end_frame))
+				print('Num_Reduced Frames: ' + str(len(reduced_frames)))
+				print('reduced_frames: ')
+				print(reduced_frames)
+				'''
+
+			res_frames_list = []
+			for j in frames_list:
+				if j not in res_frames_list:
+					res_frames_list.append(j)
+			res_frames_list.sort()
 			
 			#print('CLIP list')
 			#print(res_frames_list)
 			
-			self.annotations.append(clip_annotation(clip_name, clip_end_frame, action_list))
-		#self.save_annotations()
+			self.annotations.append(clip_annotation(clip_name, clip_end_frame, action_list, res_frames_list))
+		self.save_annotations()
 
 	def save_annotations():
 		pickle_file_annotations = open('annotations.pkl', 'wb')
