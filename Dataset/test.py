@@ -32,7 +32,10 @@ d_i = list(data_labels.values())
 new_num = []
 
 for i in range(len(d_i)):
-	new_num.append(len(d_i[i]) / 20)	
+	num = len(d_i[i]) / 10
+	if num > 10:
+		num = 10
+	new_num.append(num)	
 	print(str(i) + ' ' + str(len(d_i[i])) + ' ' + str(math.floor(new_num[i])))
 
 new_clips = []
@@ -54,8 +57,8 @@ print(new_clips)
 source_o = './Full_data/optical_flow/'
 source_f = './Full_data/RGB_frames/'
 
-dest_o = './Select_Data/optical_flow/'
-dest_f = './Select_Data/RGB_frames/'
+dest_o = './Select_Data1/optical_flow/'
+dest_f = './Select_Data1/RGB_frames/'
 
 for f in new_clips:
 	shutil.move(source_o+f, dest_o)

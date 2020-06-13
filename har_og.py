@@ -168,7 +168,7 @@ def start():
 	if args.test:
 		d = Charades_Test_Data('./Dataset/Full_data', args.test_L, args.test_frames)
 	else:
-		d = Charades_Train_Data('./Dataset/Full_data', args.Lvalue)
+		d = Charades_Train_Data('./Dataset/Select_Data1', args.Lvalue)
 
 	model_s, model_t, criterion_s, criterion_t, optimizer_s, optimizer_t= get_model(d.num_classes, args.GPU, 2*args.Lvalue, args.learn_rate)
 
@@ -183,7 +183,7 @@ def start():
 		exit()
 
 	
-	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=True)
+	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=130, shuffle=True)
 
 	a=1
 	for epoch in range(args.num_epochs):

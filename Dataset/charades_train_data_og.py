@@ -37,7 +37,10 @@ class Charades_Train_Data(data.Dataset):
 
 		self.small_data_names = os.listdir(self.frame_dir)
 
-		self.prepare_annotations(annot_file)
+		#self.prepare_annotations(annot_file)
+		pf = open('annotations.pkl', 'rb')
+
+		self.annotations = pickle.load(pf)
 		self.get_classes(self.classfile)
 		self.num_classes = len(self.classes)
 
@@ -69,11 +72,12 @@ class Charades_Train_Data(data.Dataset):
 			#print(' ')
 			itr += 1
 			print('Annotations clip ' + str(itr) +'/'+str(tl))
-			print(i)
+			#print(i)
 			#####################################################################
 			# THIS SECTION CONSTRAINS THE DATASET TO THE MINI-DATA FOR BUG-FIXING
 			clip_name = i[0]
 			if clip_name not in self.small_data_names:
+				print('PASS')
 				continue
 			######################################################################
 
@@ -113,7 +117,7 @@ class Charades_Train_Data(data.Dataset):
 			self.annotations.append(clip_annotation(clip_name, clip_end_frame, action_list, res_frames_list))
 		self.save_annotations()
 
-	def save_annotations():
+	def save_annotations(self):
 		pickle_file_annotations = open('annotations.pkl', 'wb')
 		pickle.dump(self.annotations, pickle_file_annotations)
 		pickle_file_annotations.close()

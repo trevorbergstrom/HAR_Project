@@ -5,7 +5,7 @@ sys.path.append('./Dataset')
 sys.path.append('./Model')
 import argparse
 from torchvision import datasets, models, transforms
-from charades_train_data import Charades_Train_Data
+from charades_train_data_og import Charades_Train_Data
 from charades_test_data import Charades_Test_Data
 from confusion_matrix import confusion_matrix
 import pathlib
@@ -83,10 +83,10 @@ def test(test_loader, model_s, model_t, gpu, num_classes):
 	preds = []
 	labels = []
 	
-	#pickle_file_p = ''
-	#pickle_file_l = ''
-	pickle_file_p = 'preds.pkl'
-	pickle_file_l = 'labels.pkl'
+	pickle_file_p = ''
+	pickle_file_l = ''
+	#pickle_file_p = 'preds.pkl'
+	#pickle_file_l = 'labels.pkl'
 
 	if pickle_file_p and pickle_file_l:
 		pickle_file_p = open(pickle_file_p, 'rb')
@@ -177,7 +177,7 @@ def start():
 	else:
 		d = Charades_Train_Data(f'./Dataset/{args.data_type}', args.Lvalue)
 
-	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=False)
+	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=130, shuffle=False)
 	model_s, model_t, criterion_s, criterion_t, optimizer_s, optimizer_t= get_model(d.num_classes, args.GPU, 2*args.Lvalue)
 
 	if args.Checkpoint:
@@ -191,7 +191,7 @@ def start():
 		exit()
 
 	
-	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=128, shuffle=False)
+	train_loader = torch.utils.data.DataLoader(dataset=d, batch_size=130, shuffle=False)
 
 	a=1
 	for epoch in range(args.num_epochs):

@@ -68,12 +68,13 @@ class Charades_Train_Data(data.Dataset):
 		for i in clips:
 			#print(' ')
 			itr += 1
-			print('Annotations clip ' + str(itr) +'/'+str(tl))
-			print(i)
+			#print('Annotations clip ' + str(itr) +'/'+str(tl))
+			#print(i)
 			#####################################################################
 			# THIS SECTION CONSTRAINS THE DATASET TO THE MINI-DATA FOR BUG-FIXING
 			clip_name = i[0]
 			if clip_name not in self.small_data_names:
+				
 				continue
 			######################################################################
 
@@ -163,18 +164,18 @@ class Charades_Train_Data(data.Dataset):
 		gt_vec = np.zeros(self.num_classes)
 		
 		for i in action_list:
-			if frame in i.frames_list:
-				gt_vec[self.classes[i.label]] = 1
-			#if frame in range(i.start_frame, i.end_frame + 1):
+			#if frame in i.frames_list:
 				#gt_vec[self.classes[i.label]] = 1
+			if frame in range(i.start_frame, i.end_frame + 1):
+				gt_vec[self.classes[i.label]] = 1
 
 		return gt_vec;
 
 	def __getitem__(self, idx):
 		# Per the paper, we sample a single random frame from the clip
 		clip = self.annotations[idx]
-		#frame_range = [x for x in range(1, clip.clip_end_frame)]
-		frame = random.choice(clip.frames_list)
+		frame_range = [x for x in range(1, clip.clip_end_frame)]
+		frame = random.choice(frame_range)
 		
 		spatial_stream = self.get_frame(clip.clip_name, frame)
 		temporal_stream = self.get_frame_flow(clip.clip_name, frame, clip.clip_end_frame, L=self.L_val)

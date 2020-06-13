@@ -8,7 +8,7 @@ import itertools
 import shutil
 
 print(os.getcwd())
-train = Charades_Train_Data('./Select_Data', 2)
+train = Charades_Train_Data('./Select_Data1', 2)
 #d = Charades_Test_Data('./Full_data', 5, 25)
 
 print(len(train))
